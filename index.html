@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Static stability of rockets from Mach 0.1 to 2 — Dr George Constandinides</title>
+<meta name="description" content="Two model rockets of 60 mm diameter, 400 and 850 mm long, computed in OpenFOAM at Mach 0.1, 0.8, 1.5 and 2: the normal force, the centre of pressure and the static margin against Barrowman's method, OpenRocket's method and Ansys CFX, and why even the shortest rocket is stable.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Same design tokens as the portfolio (George_Constandinides_Portfolio_protected_2.html) */
+  :root{
+    --bg:#080B11; --bg-2:#0A0E16; --panel:#0D131D;
+    --line:rgba(255,255,255,0.085); --line-2:rgba(255,255,255,0.05);
+    --text:#E9EDF1; --muted:#98A4B1; --faint:#7D8999;
+    --cool:#35D6E0; --warm:#FFC24B; --hot:#FF5E3A; --cool-deep:#072329;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+  body{background:var(--bg);color:var(--text);font-family:"Hanken Grotesk",system-ui,sans-serif;
+       font-size:1.0625rem;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--cool);outline-offset:3px;border-radius:2px}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  .wrap{width:min(1100px, calc(100% - 32px));margin:0 auto}
+  .skip{position:absolute;left:-9999px;top:0;background:var(--cool);color:#000;padding:.5rem .8rem;z-index:100}
+  .skip:focus{left:16px;top:12px}
+
+  /* nav */
+  .nav{position:sticky;top:0;z-index:50;background:rgba(8,11,17,.86);backdrop-filter:blur(9px);border-bottom:1px solid var(--line-2)}
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.85rem 0}
+  .brand{font-family:"Space Grotesk",sans-serif;font-weight:600;text-decoration:none;letter-spacing:.01em;white-space:nowrap}
+  .brand span{color:var(--cool)}
+  .nav ul{display:flex;gap:1.1rem;list-style:none;font-size:.82rem}
+  .nav ul a{text-decoration:none;color:var(--muted);white-space:nowrap}
+  .nav ul a:hover{color:var(--text)}
+  @media (max-width:960px){ .nav ul{display:none} }
+
+  /* hero */
+  .hero{padding:clamp(3.5rem,8vw,6.5rem) 0 clamp(2.5rem,5vw,4rem);
+        background:radial-gradient(1200px 500px at 85% -10%, rgba(53,214,224,.10), transparent 60%),
+                   radial-gradient(900px 400px at -10% 110%, rgba(255,94,58,.07), transparent 60%)}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cool);margin-bottom:1rem}
+  h1{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(2.1rem,5.2vw,3.6rem);line-height:1.08;letter-spacing:-.015em;max-width:20ch}
+  .lede{color:var(--muted);font-size:clamp(1.05rem,1.6vw,1.2rem);max-width:70ch;margin-top:1.2rem}
+  .tags{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:1.4rem}
+  .tag{font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.2rem .65rem}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;margin-top:2.4rem;
+         background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .stat{background:var(--panel);padding:1.1rem 1.2rem}
+  .stat .v{font-family:"Space Grotesk",sans-serif;font-size:1.7rem;font-weight:600;color:var(--text)}
+  .stat .v em{font-style:normal;color:var(--cool)}
+  .stat .k{font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--muted);margin-top:.2rem}
+
+  /* sections */
+  .section{padding:clamp(3rem,7vw,5.5rem) 0;border-top:1px solid var(--line-2)}
+  h2{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(1.55rem,3.2vw,2.3rem);line-height:1.15;letter-spacing:-.01em;margin-bottom:1.1rem;max-width:28ch}
+  h3{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:1.15rem;margin:1.6rem 0 .5rem}
+  .prose{max-width:68ch}
+  .prose p + p{margin-top:.9rem}
+  .prose ul,.prose ol{margin:.6rem 0 0 1.2rem}
+  .prose li{margin:.35rem 0}
+  .muted{color:var(--muted)}
+
+  /* links */
+  .btns{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1.6rem}
+  .btn{display:inline-flex;align-items:center;gap:.45rem;text-decoration:none;font-weight:600;font-size:.95rem;
+       padding:.65rem 1rem;border-radius:10px;border:1px solid var(--line);background:var(--panel)}
+  .btn.primary{background:var(--cool);color:#00191c;border-color:transparent}
+  .btn:hover{border-color:var(--cool)}
+
+  footer{border-top:1px solid var(--line-2);padding:2.2rem 0 3rem;color:var(--faint);font-size:.88rem}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:.6rem 1.5rem;justify-content:space-between}
+  footer a{color:var(--muted)}
+
+  /* additions for this page */
+  sup,sub{line-height:0}
+  section[id]{scroll-margin-top:4.2rem}
+  .credit-line{font-size:.78rem;color:var(--faint);margin-top:.35rem;overflow-wrap:anywhere}
+  .credit-line a{color:inherit}
+
+  /* pictures: the flow pictures fill their frame, the charts and drawings are light; each opens enlarged */
+  .shot{margin:1.6rem 0 0}
+  .zoom{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#000;
+        cursor:zoom-in;font:inherit;color:inherit}
+  .zoom:hover{border-color:rgba(53,214,224,.55)}
+  .zoom img{display:block;width:100%;height:auto}
+  .shot.light .zoom{background:#fff}
+  .shot figcaption,.vid figcaption{font-size:.9rem;color:var(--muted);margin-top:.6rem;max-width:80ch}
+  .shot figcaption .mono,.vid figcaption .mono{color:var(--cool);margin-right:.4rem}
+  .shot.mid{max-width:900px}
+  .shot.narrow{max-width:640px}
+  .hero-shot{margin:2rem 0 0}
+  .gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem;margin-top:1.4rem}
+  @media (max-width:640px){ .gallery{grid-template-columns:1fr} }
+  .gallery .shot{margin-top:0}
+  .hint{font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--faint);margin-top:.9rem}
+
+  /* videos with a choice: one player, a button per video */
+  .vid{margin:1.8rem 0 0}
+  .vid video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;border-radius:12px;border:1px solid var(--line)}
+  .cases{display:flex;flex-wrap:wrap;gap:.45rem;margin:0 0 .7rem}
+  .cases button{font:500 .76rem/1 "IBM Plex Mono",monospace;letter-spacing:.03em;color:var(--muted);background:var(--panel);
+                border:1px solid var(--line);border-radius:999px;padding:.55rem .85rem;cursor:pointer}
+  .cases button:hover{color:var(--text);border-color:rgba(53,214,224,.55)}
+  .cases button[aria-pressed="true"]{color:#00191c;background:var(--cool);border-color:transparent}
+
+  /* two columns: text beside a figure or a table */
+  .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(1.5rem,4vw,3rem);align-items:start;margin-top:1.2rem}
+  @media (max-width:920px){ .split{grid-template-columns:minmax(0,1fr)} }
+  .split .shot{margin-top:0}
+  .split h3:first-child{margin-top:0}
+
+  /* tables */
+  .tbl{overflow-x:auto;margin-top:1rem;max-width:760px}
+  .tbl.wide{max-width:none}
+  .facts,.data{width:100%;border-collapse:collapse;font-size:.95rem}
+  .facts th,.facts td{text-align:left;vertical-align:top;padding:.5rem .6rem .5rem 0;border-bottom:1px solid var(--line)}
+  .facts th{font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+            color:var(--muted);width:34%;padding-top:.66rem}
+  .data th,.data td{text-align:left;padding:.5rem 1rem .5rem 0;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .data thead th{font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+                 white-space:normal;vertical-align:bottom}
+  .data thead th i,.data thead th .u{text-transform:none;letter-spacing:0}
+  .data.wraps td,.data.wraps tbody th{white-space:normal;vertical-align:top}
+  @media (max-width:560px){ .data{font-size:.88rem} .data th,.data td{padding-right:.55rem} .data thead th{font-size:.64rem;letter-spacing:.03em} }
+  .data tbody th{font-weight:500;color:var(--text)}
+  .data .sep{color:var(--faint)}
+  .tnote{font-size:.85rem;color:var(--faint);margin-top:.55rem;max-width:80ch}
+  .notes{list-style:none;color:var(--muted);font-size:.97rem}
+  .notes li{margin:.55rem 0}
+  .notes strong{color:var(--text);font-weight:600}
+
+  /* cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-top:1.4rem}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.15rem 1.25rem}
+  .card .k{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--warm)}
+  .card h3{margin:.35rem 0 .5rem;font-size:1.08rem;line-height:1.3}
+  .card p{color:var(--muted);font-size:.95rem}
+  .card p + p{margin-top:.45rem}
+  .card b{color:var(--text);font-weight:600}
+  .card ul{color:var(--muted);font-size:.93rem;margin:.5rem 0 0 1.05rem}
+  .card li{margin:.4rem 0}
+  .cards.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+  @media (max-width:980px){ .cards.three{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (max-width:640px){ .cards.three{grid-template-columns:1fr} }
+  .cards.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (max-width:820px){ .cards.two{grid-template-columns:1fr} }
+
+  /* callout */
+  .lesson{border-left:3px solid var(--warm);background:rgba(255,194,75,.06);padding:.8rem 1rem;border-radius:0 10px 10px 0;margin-top:1.6rem;max-width:80ch}
+  .lesson .mono{display:block;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--warm);margin-bottom:.25rem}
+
+  /* an equation in the text */
+  .eq{font-family:"Cambria Math","STIX Two Math","Latin Modern Math","Times New Roman",serif;font-size:1.2rem;color:var(--text);background:var(--panel);border:1px solid var(--line);
+      border-radius:10px;padding:.6rem .9rem;margin:.8rem 0;overflow-x:auto;white-space:normal}
+  .eq i{font-style:italic;padding-right:.08em}
+  .eq sup,.eq sub{font-size:.68em;margin-left:.04em}
+  .eq .no{float:right;color:var(--faint);font-size:.85em;margin-left:1rem}
+  .eq .part{display:inline-block;margin-right:1.4rem;white-space:nowrap}
+  .eq .part.long{white-space:normal}
+  @media (max-width:560px){ .eq{font-size:1rem;padding:.55rem .7rem} }
+
+  .credits{list-style:none}
+  .credits li{font-size:.93rem;color:var(--muted);margin:.6rem 0;overflow-wrap:anywhere}
+  .credits li strong{color:var(--text);font-weight:600}
+  .credits a{color:inherit}
+
+  /* picture viewer */
+  .viewer{border:0;padding:0;margin:auto;background:transparent;color:var(--text);width:min(1600px,96vw);max-width:96vw;max-height:96vh}
+  .viewer::backdrop{background:rgba(4,6,10,.95)}
+  .viewer img{display:block;margin:0 auto;width:auto;height:auto;max-width:100%;max-height:84vh;border-radius:10px;background:#000}
+  .viewer img.light{background:#fff}
+  .viewer p{font-size:.9rem;color:var(--muted);margin:.7rem auto 0;max-width:80ch;text-align:center}
+  .viewer-close{position:absolute;top:.5rem;right:.5rem;font:500 .72rem/1 "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;
+                color:var(--text);background:rgba(13,19,29,.85);border:1px solid var(--line);border-radius:999px;padding:.5rem .8rem;cursor:pointer}
+  /* ---------- ANTI-COPY LAYER (as on the portfolio) ---------- */
+  ::selection{background:transparent;color:inherit}
+  ::-moz-selection{background:transparent;color:inherit}
+
+  /* ---------- CONTENT PROTECTION ---------- */
+  html,body{
+    -webkit-touch-callout:none;            /* no iOS long-press copy/save menu */
+  }
+  *{
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    -ms-user-select:none;
+    user-select:none;
+  }
+  img{
+    -webkit-user-drag:none;
+    -khtml-user-drag:none;
+    -moz-user-drag:none;
+    -o-user-drag:none;
+    user-drag:none;
+  }
+
+  /* Contact card stays selectable & copyable so visitors can always reach these */
+  .clink,.clink *{
+    -webkit-user-select:text;
+    -moz-user-select:text;
+    -ms-user-select:text;
+    user-select:text;
+    -webkit-touch-callout:default;
+  }
+
+  /* Neutralise print / print-to-PDF text capture */
+  @media print{
+    body *{visibility:hidden !important}
+    body::before{
+      content:"This page is protected. © Dr. George Constandinides — please view it online.";
+      visibility:visible;position:fixed;inset:0;display:block;padding:3rem;
+      font-family:"IBM Plex Mono",monospace;font-size:14px;line-height:1.6;color:#000;
+    }
+  }
+
+  /* Copy-attempt toast */
+  .copy-guard{
+    position:fixed;left:50%;bottom:1.5rem;transform:translate(-50%,160%);
+    z-index:9999;max-width:min(90vw,440px);
+    display:flex;align-items:center;gap:.7rem;
+    padding:.8rem 1.1rem;border-radius:8px;
+    background:rgba(13,19,29,0.92);border:1px solid var(--line);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    box-shadow:0 12px 40px rgba(0,0,0,0.45);
+    font-family:"IBM Plex Mono",monospace;font-size:.78rem;letter-spacing:.03em;
+    color:var(--text);line-height:1.45;
+    opacity:0;pointer-events:none;
+    transition:opacity .3s ease,transform .35s cubic-bezier(.2,.7,.2,1);
+  }
+  .copy-guard.show{opacity:1;transform:translate(-50%,0)}
+  .copy-guard .cg-dot{
+    width:8px;height:8px;border-radius:50%;flex:none;
+    background:radial-gradient(circle at 30% 30%,var(--cool),var(--hot));
+  }
+  @media (prefers-reduced-motion: reduce){
+    .copy-guard{transition:opacity .2s ease;transform:translate(-50%,0)}
+    .copy-guard:not(.show){opacity:0}
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="https://ckleanth.github.io/George_Constandinides/">G. Constandinides<span>.</span></a>
+    <ul>
+      <li><a href="#rockets">Rockets</a></li>
+      <li><a href="#flow">Flow</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#why">Why stable</a></li>
+      <li><a href="#codes">Two codes</a></li>
+      <li><a href="#model">Model</a></li>
+      <li><a href="#checks">Checks</a></li>
+      <li><a href="#problems">Problems</a></li>
+      <li><a href="#credits">Credits</a></li>
+    </ul>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Case study · flight dynamics · CFD</p>
+      <h1>Static stability of rockets from Mach 0.1 to 2</h1>
+      <p class="lede">A rocket flies straight when the normal force that a gust creates acts behind its centre of gravity. Four model rockets of one family share a 180&nbsp;mm ogive nose, a 60&nbsp;mm body, four large swept fins and an Estes D12-3 motor; their bodies are 400, 450, 631 and 850&nbsp;mm long. The shortest was added to the family as the one expected to be unstable.</p>
+      <p class="lede">Sixteen steady RANS cases in OpenFOAM compute the 400 and 850&nbsp;mm rockets at Mach 0.1, 0.8, 1.5 and 2 and at angles of attack of 0 and 4°. They are compared with Barrowman's method, OpenRocket's method and eight cases in Ansys CFX, and the wall forces are split by part to show why both rockets are stable at every Mach number.</p>
+      <div class="tags"><span class="tag">OpenFOAM v1912</span><span class="tag">rhoSimpleFoam</span><span class="tag">rhoPimpleFoam</span><span class="tag">k-ω SST</span><span class="tag">Ansys CFX 2025&nbsp;R2</span><span class="tag">Ansys Meshing</span><span class="tag">Barrowman's method</span><span class="tag">OpenRocket's method</span><span class="tag">ParaView</span><span class="tag">Python</span></div>
+      <figure class="shot hero-shot">
+        <button class="zoom" type="button" aria-label="Enlarge the picture of the flow at Mach 2"><img src="assets/r400_M200_a4_mach.png" width="1920" height="1080" alt="A grey rocket seen from the side on a green field of Mach number: oblique bands spread from the nose tip and from the leading edges of the swept fins, and a dark blue, slow wake trails behind the flat base." decoding="async"></button>
+        <figcaption>The Mach number on the symmetry plane round the 400&nbsp;mm rocket at Mach 2 and 4° (OpenFOAM): shocks spring from the nose tip and the fin leading edges, and the flow expands round the base and recompresses behind it.</figcaption>
+      </figure>
+      <div class="stats">
+        <div class="stat"><div class="v"><em>0.60–0.79</em>&nbsp;calibre</div><div class="k">the 400&nbsp;mm rocket's static margin at launch from Mach 0.1 to 2: stable, though below Barrowman's rule of one calibre</div></div>
+        <div class="stat"><div class="v"><em>74–78</em>&nbsp;%</div><div class="k">of the normal force at 4° acts on the fins, behind the centre of gravity: that is why both rockets are stable</div></div>
+        <div class="stat"><div class="v"><em>1.31–1.86</em>×</div><div class="k">OpenFOAM's normal force against OpenRocket's method: the hand methods are on the safe side</div></div>
+        <div class="stat"><div class="v"><em>16</em>&nbsp;cases</div><div class="k">in OpenFOAM, 1,078&nbsp;core-hours in cloud containers; 8 more in Ansys CFX</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="rockets">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">The rockets</p>
+        <h2>Four rockets, one family, one question</h2>
+        <p>The study is a capabilities exercise: it predicts the centre of pressure (CP), the normal-force slope and the static margin of model rockets across Mach numbers with hand methods and with CFD, and turns the CFD into pictures and videos. Barrowman's method gives the CP of the four rockets at low speed, and OpenRocket's method its change with Mach number. OpenFOAM then computes the shortest and the longest rocket at four Mach numbers.</p>
+        <p>The fins are large for the body: their tips lie 240&nbsp;mm apart, four body diameters, and their leading edge is swept so far that the tips end 70&nbsp;mm behind the base. On its D12-3 motor each rocket reaches about Mach 0.11 to 0.15 in a vertical flight (an estimate with an ASSUMED drag coefficient); the cases at Mach 0.8, 1.5 and 2 take the same shapes through the transonic and supersonic range.</p>
+      </div>
+      <div class="split">
+        <div>
+          <h3>Geometry</h3>
+          <div class="tbl" style="margin-top:.4rem">
+            <table class="facts">
+              <tr><th scope="row">Body diameter</th><td>60&nbsp;mm, one calibre</td></tr>
+              <tr><th scope="row">Nose</th><td>ogive, 180&nbsp;mm long</td></tr>
+              <tr><th scope="row">Body length</th><td>400 and 850&nbsp;mm from the nose tip to the base, computed here; 450 and 631&nbsp;mm with the hand methods only</td></tr>
+              <tr><th scope="row">Fins</th><td>four flat plates, 2&nbsp;mm thick; root chord 108&nbsp;mm, tip chord 43&nbsp;mm, semi-span 90&nbsp;mm, leading-edge sweep 135&nbsp;mm</td></tr>
+              <tr><th scope="row">Area of one fin</th><td>6795&nbsp;mm², one side</td></tr>
+              <tr><th scope="row">Reference</th><td>the body's cross-section, 2827&nbsp;mm², and its diameter; distances from the nose tip, positive aft</td></tr>
+            </table>
+          </div>
+          <p class="tnote">From the designer's CAD (STEP) files.</p>
+        </div>
+        <div>
+          <h3>Mass of the 400&nbsp;mm rocket: an ASSUMED model</h3>
+          <div class="tbl" style="margin-top:.4rem">
+            <table class="data">
+              <thead><tr><th scope="col">Part</th><th scope="col">Mass</th><th scope="col"><i>x</i>, from the tip</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Nose and shoulder</th><td>41.4&nbsp;g</td><td>126.3&nbsp;mm</td></tr>
+                <tr><th scope="row">Body tube and joint</th><td>27.7 + 6.6&nbsp;g</td><td>290.0&nbsp;mm</td></tr>
+                <tr><th scope="row">Parachute and wadding</th><td>28.0 + 3.0&nbsp;g</td><td>270.0, 292.0&nbsp;mm</td></tr>
+                <tr><th scope="row">Fins</th><td>67.4&nbsp;g</td><td>389.9&nbsp;mm</td></tr>
+                <tr><th scope="row">Motor tube</th><td>20.6&nbsp;g</td><td>351.0&nbsp;mm</td></tr>
+                <tr><th scope="row">Motor and propellant</th><td>21.5 + 21.1&nbsp;g</td><td>365.0&nbsp;mm</td></tr>
+                <tr><th scope="row">At launch</th><td>237.2&nbsp;g</td><td>CG 306.3&nbsp;mm</td></tr>
+                <tr><th scope="row">At burnout</th><td>216.1&nbsp;g</td><td>CG 300.5&nbsp;mm</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tnote">No rocket was weighed. Printed parts in PLA of 1.24&nbsp;g/cm³, sized like those of the Inholland model rocket; an Estes D12-3 motor of 42.6&nbsp;g with 21.1&nbsp;g of propellant. The 850&nbsp;mm rocket, 313.6&nbsp;g, has its CG at 573.4&nbsp;mm at launch and 556.0&nbsp;mm at burnout.</p>
+        </div>
+      </div>
+      <figure class="shot light mid">
+        <button class="zoom" type="button" aria-label="Enlarge Fig. 1"><img src="assets/cp_cg_rockets.png" width="1500" height="1440" alt="Four grey rocket outlines to scale, from 400 to 850 mm long: on each a red diamond marks the centre of pressure and blue circles the centre of gravity; the gap between them grows with the length." loading="lazy" decoding="async"></button>
+        <figcaption><span class="mono">Fig. 1</span>The four rockets to scale, from the nose tip: Barrowman's CP (red diamond) and the ASSUMED CG at launch (open circle) and at burnout (dot). The titles give Barrowman's static margins in calibres.</figcaption>
+      </figure>
+      <div class="prose">
+        <h3>Stability in one number</h3>
+        <p>The forces on the rocket are reduced to coefficients of the whole rocket in body axes: the axial force <i>F</i><sub>x</sub> along the axis, the normal force <i>F</i><sub>z</sub> in the plane of the angle of attack and the pitching moment <i>M</i><sub>y</sub> about a reference point on the axis, with the free stream's dynamic pressure <i>q</i><sub>∞</sub>:</p>
+        <p class="eq"><span class="part"><i>C</i><sub>A</sub> = <i>F</i><sub>x</sub> / (<i>q</i><sub>∞</sub> <i>A</i><sub>ref</sub>)</span><span class="part"><i>C</i><sub>N</sub> = <i>F</i><sub>z</sub> / (<i>q</i><sub>∞</sub> <i>A</i><sub>ref</sub>)</span><span class="part"><i>C</i><sub>m</sub> = <i>M</i><sub>y</sub> / (<i>q</i><sub>∞</sub> <i>A</i><sub>ref</sub> <i>d</i>)</span></p>
+        <p>The CP is the point on the axis about which the normal force has no moment, and the static margin <i>SM</i> is the CP's distance behind the CG, in calibres:</p>
+        <p class="eq"><span class="part"><i>x</i><sub>CP</sub> = <i>x</i><sub>ref</sub> − <i>d</i> <i>C</i><sub>m</sub> / <i>C</i><sub>N</sub></span><span class="part"><i>SM</i> = (<i>x</i><sub>CP</sub> − <i>x</i><sub>CG</sub>) / <i>d</i></span></p>
+        <p>A positive margin makes the rocket statically stable: when a gust raises the nose, the normal force acts behind the CG, and its moment turns the nose back into the wind. Barrowman's rule asks for at least one calibre. By Barrowman's method the four rockets have 0.49, 0.70, 1.53 and 2.64&nbsp;calibres at launch, so the 400&nbsp;mm rocket is the marginal one: whether it is stable at every Mach number is the question the CFD answers.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="flow">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">The flow</p>
+        <h2>From Mach 0.1 to 2 in videos and pictures</h2>
+        <p>At Mach 0.1 the flow speeds up over the nose shoulder and leaves a slow wake behind the base and the fins. At Mach 0.8 the flow over the nose shoulder and the fins approaches sonic speed but stays subsonic. At Mach 1.5 and 2 shocks spring from the nose tip and the fin leading edges, the flow expands round the base and recompresses behind it, and the shocks lean back more steeply at Mach 2.</p>
+      </div>
+      <figure class="vid switch">
+        <div class="cases" role="group" aria-label="Choose the video">
+          <button type="button" aria-pressed="true" data-src="assets/rocket400_mach_sweep.mp4" data-poster="assets/rocket400_mach_sweep_poster.jpg" data-label="The 400 mm rocket seen from the side, first on a field of Mach number, then on a white numerical schlieren, at Mach 0.1, 0.8, 1.5 and 2 in turn; at the two supersonic speeds oblique shocks spread from the nose and the fins." data-caption="The 400&nbsp;mm rocket at 4° from Mach 0.1 to 2: at each Mach number the Mach number on the symmetry plane, then the numerical schlieren of the same plane (25.8&nbsp;s).">Mach sweep · 400&nbsp;mm</button>
+          <button type="button" aria-pressed="false" data-src="assets/rocket850_mach_sweep.mp4" data-poster="assets/rocket850_mach_sweep_poster.jpg" data-label="The 850 mm rocket seen from the side, first on a field of Mach number, then on a white numerical schlieren, at Mach 0.1, 0.8, 1.5 and 2 in turn; at the two supersonic speeds oblique shocks spread from the nose and the fins." data-caption="The 850&nbsp;mm rocket at 4° from Mach 0.1 to 2: at each Mach number the Mach number on the symmetry plane, then the numerical schlieren of the same plane (25.8&nbsp;s).">Mach sweep · 850&nbsp;mm</button>
+          <button type="button" aria-pressed="false" data-src="assets/rocket400_M1.5_crossflow_planes.mp4" data-poster="assets/rocket400_M1.5_crossflow_planes_poster.jpg" data-label="The 400 mm rocket in perspective with a disc across the flow that steps from the nose to the wake, coloured by Mach number; near the fins bright spots mark the tips." data-caption="The 400&nbsp;mm rocket at Mach 1.5 and 4°: the Mach number on 12 planes across the flow, from the nose to the wake (20.2&nbsp;s).">Cross-flow planes · Mach 1.5</button>
+          <button type="button" aria-pressed="false" data-src="assets/rocket400_M2_orbit.mp4" data-poster="assets/rocket400_M2_orbit_poster.jpg" data-label="A camera circles the 400 mm rocket at Mach 2: red cones of compression stand on the nose and the fin leading edges, and blue surfaces of expansion trail behind the fins and the base." data-caption="A camera circling the 400&nbsp;mm rocket at Mach 2 and 4°, with the surfaces of pressure coefficient +0.1 (red, compression) and −0.1 (blue, expansion) (15.4&nbsp;s).">Orbit · Mach 2</button>
+        </div>
+        <video controls muted playsinline preload="none" width="1920" height="1080" poster="assets/rocket400_mach_sweep_poster.jpg" aria-label="The 400 mm rocket seen from the side, first on a field of Mach number, then on a white numerical schlieren, at Mach 0.1, 0.8, 1.5 and 2 in turn; at the two supersonic speeds oblique shocks spread from the nose and the fins.">
+          <source src="assets/rocket400_mach_sweep.mp4" type="video/mp4">
+        </video>
+        <figcaption><span class="mono">Video</span><span class="vcap">The 400&nbsp;mm rocket at 4° from Mach 0.1 to 2: at each Mach number the Mach number on the symmetry plane, then the numerical schlieren of the same plane (25.8&nbsp;s).</span></figcaption>
+      </figure>
+      <p class="tnote">Rendered in ParaView from the OpenFOAM results, the half model mirrored for display. In the side views the flow runs from left to right, with the rocket's nose 4° above the free stream. Each video opens and closes with a title card and has no sound (1920 × 1080, 30 frames/s).</p>
+      <figure class="shot light">
+        <button class="zoom" type="button" aria-label="Enlarge Fig. 2"><img src="assets/panels_r400_mach.png" width="1890" height="1183" alt="Four panels of the 400 mm rocket on fields of Mach number: at Mach 0.1 and 0.8 smooth fields with a dark wake behind the base; at Mach 1.5 and 2 oblique shock bands from the nose and the fins, steeper at Mach 2." loading="lazy" decoding="async"></button>
+        <figcaption><span class="mono">Fig. 2</span>Mach number on the symmetry plane round the 400&nbsp;mm rocket at 4°, flow from left to right: (a) Mach 0.1, (b) 0.8, (c) 1.5, (d) 2; the half rocket in grey stands in front of the plane.</figcaption>
+      </figure>
+      <figure class="shot light">
+        <button class="zoom" type="button" aria-label="Enlarge Fig. 3"><img src="assets/panels_r400_schlieren.png" width="1890" height="1183" alt="Four panels of a copper-coloured rocket on white: faint grey shading round the nose and fins at Mach 0.1 and 0.8; sharp grey lines of shocks leaving the nose tip and the fins at Mach 1.5 and 2." loading="lazy" decoding="async"></button>
+        <figcaption><span class="mono">Fig. 3</span>Numerical schlieren of the same planes, (a) to (d) Mach 0.1 to 2: exp(−3 |∇ρ| / <i>g</i><sub>90</sub>), with <i>g</i><sub>90</sub> the 90th percentile of the density gradient |∇ρ| in view.</figcaption>
+      </figure>
+      <div class="split" style="margin-top:1.6rem">
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 4"><img src="assets/panels_r400_cp.png" width="1890" height="1183" alt="Four views of the rocket from below, coloured by pressure coefficient from blue to red: the nose tip and the fins' leading edges are red, most of the body pale." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 4</span>Pressure coefficient on the 400&nbsp;mm rocket at 4°, seen from below, the windward side (the half model mirrored), (a) to (d) Mach 0.1 to 2: the nose and the fin leading edges carry the highest pressure.</figcaption>
+        </figure>
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 5"><img src="assets/panels_r850_mach.png" width="1890" height="1183" alt="Four panels of the long 850 mm rocket on fields of Mach number at Mach 0.1, 0.8, 1.5 and 2, with oblique shocks from the nose and the fins at the two supersonic speeds." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 5</span>Mach number on the symmetry plane round the 850&nbsp;mm rocket at 4°, (a) to (d) Mach 0.1 to 2.</figcaption>
+        </figure>
+      </div>
+      <p class="hint">Select any figure to enlarge it.</p>
+    </div>
+  </section>
+
+  <section class="section" id="results">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">Results</p>
+        <h2>Stable at every Mach number</h2>
+        <p>Both rockets are statically stable at all four Mach numbers, at launch and at burnout. At 4° the 400&nbsp;mm rocket has 0.60 to 0.79&nbsp;calibre at launch, below Barrowman's rule of one calibre, and the 850&nbsp;mm rocket 2.43 to 3.13. The margins grow at burnout, as the CG moves forward with the burnt propellant.</p>
+        <p>The normal force at 4° rises from Mach 0.1 to a peak at Mach 0.8 and falls above it; the slope <i>C</i><sub>Nα</sub> runs from 17.9 to 28.0 per radian. OpenFOAM gives 1.31 to 1.86 times the normal force of OpenRocket's method, the most at Mach 2, where that method's supersonic fins lose lift fastest, and places the CP 7.0 to 71.0&nbsp;mm further aft. Its margins therefore exceed those of OpenRocket's method at every Mach number, by 0.12 to 1.18&nbsp;calibre: at Mach 2 that method leaves the 400&nbsp;mm rocket 0.17&nbsp;calibre, OpenFOAM 0.63.</p>
+      </div>
+      <div>
+        <div>
+          <h3>400&nbsp;mm rocket at 4°</h3>
+          <div class="tbl" style="margin-top:.4rem">
+            <table class="data wraps">
+              <thead><tr><th scope="col">Mach</th><th scope="col"><i>C</i><sub>N</sub>, OF / OR</th><th scope="col"><i>x</i><sub>CP</sub> <span class="u">(mm)</span>, OF / OR</th><th scope="col"><i>SM</i> at launch, OF / OR</th><th scope="col"><i>SM</i> at burnout, OF</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">0.1</th><td>1.736 <span class="sep">/</span> 1.206</td><td>342.2 <span class="sep">/</span> 331.9</td><td>0.60 <span class="sep">/</span> 0.43</td><td>0.69</td></tr>
+                <tr><th scope="row">0.8</th><td>1.912 <span class="sep">/</span> 1.448</td><td>349.2 <span class="sep">/</span> 342.2</td><td>0.72 <span class="sep">/</span> 0.60</td><td>0.81</td></tr>
+                <tr><th scope="row">1.5</th><td>1.631 <span class="sep">/</span> 0.973</td><td>353.4 <span class="sep">/</span> 336.5</td><td>0.79 <span class="sep">/</span> 0.50</td><td>0.88</td></tr>
+                <tr><th scope="row">2</th><td>1.276 <span class="sep">/</span> 0.687</td><td>343.9 <span class="sep">/</span> 316.7</td><td>0.63 <span class="sep">/</span> 0.17</td><td>0.72</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3>850&nbsp;mm rocket at 4°</h3>
+          <div class="tbl" style="margin-top:.4rem">
+            <table class="data wraps">
+              <thead><tr><th scope="col">Mach</th><th scope="col"><i>C</i><sub>N</sub>, OF / OR</th><th scope="col"><i>x</i><sub>CP</sub> <span class="u">(mm)</span>, OF / OR</th><th scope="col"><i>SM</i> at launch, OF / OR</th><th scope="col"><i>SM</i> at burnout, OF</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">0.1</th><td>1.775 <span class="sep">/</span> 1.257</td><td>748.6 <span class="sep">/</span> 711.7</td><td>2.92 <span class="sep">/</span> 2.30</td><td>3.21</td></tr>
+                <tr><th scope="row">0.8</th><td>1.967 <span class="sep">/</span> 1.499</td><td>761.2 <span class="sep">/</span> 732.9</td><td>3.13 <span class="sep">/</span> 2.66</td><td>3.42</td></tr>
+                <tr><th scope="row">1.5</th><td>1.631 <span class="sep">/</span> 1.024</td><td>751.6 <span class="sep">/</span> 700.0</td><td>2.97 <span class="sep">/</span> 2.11</td><td>3.26</td></tr>
+                <tr><th scope="row">2</th><td>1.253 <span class="sep">/</span> 0.738</td><td>719.0 <span class="sep">/</span> 648.0</td><td>2.43 <span class="sep">/</span> 1.24</td><td>2.72</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="tnote">OF: OpenFOAM, the mean over the last 200 iterations of each run; OR: OpenRocket's method. <i>x</i><sub>CP</sub> from the nose tip; static margins in calibres of 60&nbsp;mm for the ASSUMED CG.</p>
+      <div class="gallery">
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 6"><img src="assets/fig_cn4_mach.png" width="1882" height="858" alt="Two plots of normal-force coefficient at 4 degrees against Mach number: the OpenFOAM points peak at Mach 0.8 and lie well above the curve of OpenRocket's method, which falls steeply towards Mach 2; CFX and Barrowman points sit at Mach 0.1." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 6</span>Normal-force coefficient at 4° against Mach number: OpenFOAM, CFX, OpenRocket's method and Barrowman's method with body lift (low speed); (a) 400&nbsp;mm rocket, (b) 850&nbsp;mm rocket.</figcaption>
+        </figure>
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 7"><img src="assets/fig_xcp4_mach.png" width="1882" height="888" alt="Two plots of the centre of pressure against Mach number: the OpenFOAM points lie above the curve of OpenRocket's method at every Mach number, and grey lines mark the centre of gravity at launch and at burnout below both." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 7</span>CP at 4° against Mach number, from the nose tip, with the ASSUMED CG at launch and at burnout (grey lines); (a) 400&nbsp;mm rocket, (b) 850&nbsp;mm rocket.</figcaption>
+        </figure>
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 8"><img src="assets/fig_margin_mach.png" width="1882" height="858" alt="Two plots of static margin in calibres against Mach number: every point is positive; the OpenFOAM margins lie above those of OpenRocket's method, the gap widest at Mach 2." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 8</span>Static margin at 4° against Mach number for the ASSUMED CG at launch: OpenFOAM, CFX and OpenRocket's method; (a) 400&nbsp;mm rocket, (b) 850&nbsp;mm rocket.</figcaption>
+        </figure>
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 9"><img src="assets/fig_ca_mach.png" width="1882" height="858" alt="Two plots of axial-force coefficient against Mach number at 0 and 4 degrees: values between about 0.53 and 0.70, highest at Mach 1.5, with bars for the spread, longest at Mach 0.8, and CFX points just below at Mach 0.1." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 9</span>Axial-force coefficient against Mach number at 0 and 4°: OpenFOAM (bars from the smallest to the largest value over the last 20&nbsp;% of each run) and CFX; (a) 400&nbsp;mm rocket, (b) 850&nbsp;mm rocket.</figcaption>
+        </figure>
+      </div>
+      <p class="tnote">The axial-force coefficient lies between 0.53 and 0.70: it is highest at Mach 1.5 for both rockets and lower at Mach 2. CFX's two cases of the 400&nbsp;mm rocket at Mach 0.1 lie 0.027 (0°) and 0.026 (4°) below OpenFOAM.</p>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">Why they are stable</p>
+        <h2>The fins win the balance of moments</h2>
+        <p>The wall of each case is split into the nose, the cylindrical body, the fins and the base, and the wall forces are summed over each part, so the normal force of each part and the point where it acts can be read. On both rockets and at every Mach number the fins carry 74 to 78&nbsp;% of the normal force and the nose 7 to 14&nbsp;%; the body carries the rest.</p>
+        <p>On the 400&nbsp;mm rocket the fins' normal force acts 374 to 389&nbsp;mm from the nose tip, 68 to 83&nbsp;mm behind the launch CG, and the nose's 82 to 96&nbsp;mm from the tip, 210 to 224&nbsp;mm ahead of it. The body's normal force acts beside the fin roots, which begin at 292&nbsp;mm, where the fins' pressure field reaches the body; Barrowman's method books this part of the lift to the fins. It too acts behind the CG.</p>
+      </div>
+      <figure class="shot light mid">
+        <button class="zoom" type="button" aria-label="Enlarge Fig. 10"><img src="assets/fig_forces_where.png" width="1945" height="1928" alt="Four side views of the rockets to scale with upward arrows: a long arrow on the fins and short ones on the nose and the body; the CG marker ahead of the CP marker, with the static margin drawn between them." loading="lazy" decoding="async"></button>
+        <figcaption><span class="mono">Fig. 10</span>Where the normal force acts at 4° (last iteration): each arrow stands at the point where a part's normal force acts, its length in proportion to the part's <i>C</i><sub>N</sub>, with the CG at launch and the CP of the whole rocket; flow from the left. (a) 400&nbsp;mm rocket at Mach 0.1, (b) at Mach 2, (c) 850&nbsp;mm rocket at Mach 0.1, (d) at Mach 2.</figcaption>
+      </figure>
+      <div class="split" style="margin-top:2rem">
+        <div>
+          <h3>400&nbsp;mm rocket: each part's normal force and where it acts</h3>
+          <div class="tbl" style="margin-top:.4rem">
+            <table class="data wraps">
+              <thead><tr><th scope="col">Mach</th><th scope="col">Nose</th><th scope="col">Body</th><th scope="col">Fins</th><th scope="col"><i>SM</i></th></tr></thead>
+              <tbody>
+                <tr><th scope="row">0.1</th><td>0.140 at 88</td><td>0.275 at 319</td><td>1.313 at 374</td><td>0.60</td></tr>
+                <tr><th scope="row">0.8</th><td>0.139 at 82</td><td>0.287 at 331</td><td>1.492 at 378</td><td>0.73</td></tr>
+                <tr><th scope="row">1.5</th><td>0.168 at 96</td><td>0.180 at 348</td><td>1.280 at 388</td><td>0.79</td></tr>
+                <tr><th scope="row">2</th><td>0.170 at 96</td><td>0.128 at 324</td><td>0.974 at 389</td><td>0.63</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3>850&nbsp;mm rocket</h3>
+          <div class="tbl" style="margin-top:.4rem">
+            <table class="data wraps">
+              <thead><tr><th scope="col">Mach</th><th scope="col">Nose</th><th scope="col">Body</th><th scope="col">Fins</th><th scope="col"><i>SM</i></th></tr></thead>
+              <tbody>
+                <tr><th scope="row">0.1</th><td>0.133 at 86</td><td>0.318 at 724</td><td>1.311 at 825</td><td>2.92</td></tr>
+                <tr><th scope="row">0.8</th><td>0.141 at 85</td><td>0.345 at 741</td><td>1.493 at 829</td><td>3.10</td></tr>
+                <tr><th scope="row">1.5</th><td>0.167 at 95</td><td>0.197 at 765</td><td>1.259 at 838</td><td>2.97</td></tr>
+                <tr><th scope="row">2</th><td>0.169 at 96</td><td>0.137 at 670</td><td>0.940 at 839</td><td>2.43</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="tnote">At 4°, at the last iteration of each run: the part's <i>C</i><sub>N</sub> at the point where it acts, in mm from the nose tip; <i>SM</i>, the static margin at launch in calibres. The base and the viscous normal force make up the rest of <i>C</i><sub>N</sub>, at most 0.8&nbsp;%.</p>
+      <div class="prose">
+        <h3>The moments about the CG</h3>
+        <p>Each part's moment about the launch CG, divided by the whole normal force, is that part's share of the static margin, and the shares add up to the margin:</p>
+        <p class="eq"><span class="part"><i>SM</i><sub>i</sub> = −<i>C</i><sub>m,CG,i</sub> / <i>C</i><sub>N</sub></span><span class="part">Σ<sub>i</sub> <i>SM</i><sub>i</sub> = <i>SM</i></span></p>
+        <p>On the 400&nbsp;mm rocket the fins add 0.86 to 1.07&nbsp;calibre and the nose takes 0.27 to 0.46: the fins' restoring moment is 2.3 to 3.5 times the nose's upsetting moment. The body adds 0.03 to 0.08&nbsp;calibre. On the 850&nbsp;mm rocket the fins add 3.10 to 3.41&nbsp;calibres against 0.58 to 1.07 from the nose, and the body 0.18 to 0.49.</p>
+      </div>
+      <figure class="shot light">
+        <button class="zoom" type="button" aria-label="Enlarge Fig. 11"><img src="assets/fig_breakdown.png" width="1882" height="1218" alt="Four bar charts against Mach number: stacked normal force by part, dominated by dark blue fin bars; and the margin shares, tall positive fin bars against short negative nose bars, with diamonds marking the margins." loading="lazy" decoding="async"></button>
+        <figcaption><span class="mono">Fig. 11</span>The parts at 4° (last iteration): (a, c) normal force, stacked; (b, d) shares of the static margin about the launch CG, with the margin (diamonds); (a, b) 400&nbsp;mm rocket, (c, d) 850&nbsp;mm rocket.</figcaption>
+      </figure>
+      <div class="cards three">
+        <div class="card"><div class="k">The fins</div><h3>Large and far aft</h3><p>Their four planforms add up to 27,180&nbsp;mm², 9.6 times the body's cross-section, and Barrowman's method gives them 7.3 times the normal-force slope of the nose. Their sweep carries their area to the base and beyond: on the 400&nbsp;mm rocket their normal force acts 11 to 26&nbsp;mm ahead of the base. A gust that raises the nose creates a force on the fins 5.7 to 10.7 times the force on the nose, on a lever arm about the CG 31 to 39&nbsp;% as long as the nose's.</p></div>
+        <div class="card"><div class="k">The nose and the Mach number</div><h3>Above Mach 1 the nose gains, the fins lose</h3><p>At Mach 0.1 the nose's normal force agrees with slender-body theory: 0.140 at 88&nbsp;mm, against 0.140 at 84&nbsp;mm in Barrowman's method. Above Mach 1 it rises to 0.170 and moves aft to 96&nbsp;mm, while the fins' falls from 1.492 at Mach 0.8 to 0.974 at Mach 2: the 400&nbsp;mm rocket's margin falls from 0.79 at Mach 1.5 to 0.63 at Mach 2. The fins' normal force moves aft at the same time, from 374 to 389&nbsp;mm, which keeps the margin above its low-speed value.</p></div>
+        <div class="card"><div class="k">The mass</div><h3>The heavy parts sit at the tail</h3><p>The CG of the 400&nbsp;mm rocket lies 77&nbsp;% of the way from the nose tip: the fins, the motor tube and the motor with its propellant weigh 130.6&nbsp;g together, 55&nbsp;% of the launch mass. The fins alone weigh 67.4&nbsp;g, 28&nbsp;% of the rocket, and pull the CG towards the CP they create; yet they move the CP 252&nbsp;mm aft (Barrowman's method) and the CG only 33&nbsp;mm.</p></div>
+        <div class="card"><div class="k">The length</div><h3>The CG follows the CP</h3><p>Lengthening the body moves the fins, and with them the CP, aft by the added length, but moves the CG less, because the nose and the recovery parts stay in front. From 400 to 450&nbsp;mm, Barrowman's CP moves 44.0&nbsp;mm aft and the CG 31.2&nbsp;mm, so 50&nbsp;mm of body add 0.21&nbsp;calibre. From 400 to 850&nbsp;mm at Mach 0.1, OpenFOAM's CP moves 406.4&nbsp;mm and the CG 267.1&nbsp;mm, and the margin grows from 0.60 to 2.92&nbsp;calibres. Shortening works the other way, but slowly: the CG follows the CP, and the 400&nbsp;mm rocket, the shortest of the family, keeps 0.49&nbsp;calibre in Barrowman's method and 0.60 to 0.79 in OpenFOAM.</p></div>
+        <div class="card"><div class="k">Neutral stability</div><h3>Marginal, not unstable</h3><p>Neutral stability needs the CG at the CP: for the 400&nbsp;mm rocket at Mach 0.1 and 4°, 35.9&nbsp;mm aft of the launch CG, at 342.2&nbsp;mm. With the mass model that takes 39.5&nbsp;g off the 41.4&nbsp;g nose, or 179&nbsp;g more at the fins, 2.7 times their own mass: both far outside a printed rocket of this design. A built rocket's margin follows from its own CG, which this study does not measure; for any plausible build of this design the 400&nbsp;mm rocket is stable with a margin below one calibre: marginal, not unstable.</p></div>
+        <div class="card"><div class="k">At burnout</div><h3>More stable as the motor burns</h3><p>As the 21.1&nbsp;g of propellant burn at the tail, the CG moves forward by 5.7&nbsp;mm in the 400&nbsp;mm rocket and 17.4&nbsp;mm in the 850&nbsp;mm rocket, and the margins grow by 0.10 and 0.29&nbsp;calibre.</p></div>
+      </div>
+      <div class="lesson"><span class="mono">Why the CFD margins exceed the hand methods'</span>At Mach 0.1 and 4° the CFD's nose matches Barrowman's. The difference sits at the tail: OpenFOAM puts 1.313 on the fins and 0.275 on the body beside them, 1.588 together, against 1.025 for Barrowman's fins with their body interference and 0.039 for the body's crossflow lift, which Barrowman's method places ahead of the CG. More normal force behind the CG moves the CP aft, from Barrowman's 332.0&nbsp;mm to OpenFOAM's 342.2&nbsp;mm. At Mach 2 OpenRocket's method lets the supersonic fins lose lift faster than the CFD shows: <i>C</i><sub>N</sub>&nbsp;=&nbsp;0.687 with the CP at 316.7&nbsp;mm, against 1.276 and 343.9&nbsp;mm from OpenFOAM. The hand methods are therefore on the safe side for these rockets: they predict smaller margins than the CFD.</div>
+    </div>
+  </section>
+
+  <section class="section" id="codes">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">Two CFD codes and the hand methods</p>
+        <h2>CFX and OpenFOAM against Barrowman's method</h2>
+        <p>Within the time of this study, Ansys CFX ran 8 of its 57 planned cases: the 400 and 450&nbsp;mm rockets at Mach 0.1 and 0, 2, 4 and 8°. At Mach 0.1 and 4° on the 400&nbsp;mm rocket, OpenFOAM's normal force is 9&nbsp;% above CFX's and its CP 2.8&nbsp;mm further aft. In every case at incidence, CFX gives more normal force than Barrowman's method and a CP further aft, as OpenFOAM does: both CFD codes put the rockets' margins above the hand method's.</p>
+      </div>
+      <div class="tbl wide">
+        <table class="data wraps">
+          <thead><tr><th scope="col">Rocket, angle</th><th scope="col"><i>C</i><sub>A</sub>, CFX</th><th scope="col"><i>C</i><sub>N</sub>: CFX / OpenFOAM / Barrowman</th><th scope="col"><i>x</i><sub>CP</sub> <span class="u">(mm)</span>: CFX / OpenFOAM / Barrowman</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">400&nbsp;mm, 0°</th><td>0.525</td><td>0.008 <span class="sep">/</span> 0.013 <span class="sep">/</span> –</td><td>–</td></tr>
+            <tr><th scope="row">400&nbsp;mm, 2°</th><td>0.522</td><td>0.792 <span class="sep">/</span> – <span class="sep">/</span> 0.592</td><td>339.3 <span class="sep">/</span> – <span class="sep">/</span> 333.8</td></tr>
+            <tr><th scope="row">400&nbsp;mm, 4°</th><td>0.517</td><td>1.592 <span class="sep">/</span> 1.736 <span class="sep">/</span> 1.204</td><td>339.4 <span class="sep">/</span> 342.2 <span class="sep">/</span> 332.0</td></tr>
+            <tr><th scope="row">400&nbsp;mm, 8°</th><td>0.488</td><td>3.149 <span class="sep">/</span> – <span class="sep">/</span> 2.484</td><td>337.7 <span class="sep">/</span> – <span class="sep">/</span> 328.7</td></tr>
+            <tr><th scope="row">450&nbsp;mm, 0°</th><td>0.531</td><td>0.005 <span class="sep">/</span> – <span class="sep">/</span> –</td><td>–</td></tr>
+            <tr><th scope="row">450&nbsp;mm, 2°</th><td>0.527</td><td>0.793 <span class="sep">/</span> – <span class="sep">/</span> 0.593</td><td>385.1 <span class="sep">/</span> – <span class="sep">/</span> 377.2</td></tr>
+            <tr><th scope="row">450&nbsp;mm, 4°</th><td>0.522</td><td>1.603 <span class="sep">/</span> – <span class="sep">/</span> 1.209</td><td>385.1 <span class="sep">/</span> – <span class="sep">/</span> 374.8</td></tr>
+            <tr><th scope="row">450&nbsp;mm, 8°</th><td>0.494</td><td>3.162 <span class="sep">/</span> – <span class="sep">/</span> 2.507</td><td>382.2 <span class="sep">/</span> – <span class="sep">/</span> 370.5</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">Mach 0.1. Barrowman: Barrowman's method with the body's crossflow lift. <i>x</i><sub>CP</sub> from the nose tip, not defined at 0°; a dash marks a case that the method did not compute.</p>
+    </div>
+  </section>
+
+  <section class="section" id="model">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">The model</p>
+        <h2>Half models, four meshes, two solver set-ups</h2>
+        <p>The half rocket, with the symmetry plane through its axis, sits in a cylinder that reaches 5 overall lengths upstream and 15 downstream of the rocket, with a radius of 10 overall lengths. Ansys Meshing fills it with tetrahedra and grows 35 prism layers on every wall, from a first layer of 2&nbsp;µm at a growth ratio of 1.2; the surface cells are 1&nbsp;mm on the fins and 2.5&nbsp;mm elsewhere. The supersonic cases use meshes with a refinement zone for the shocks: a cylinder of 4 body diameters in radius, from 0.1 overall lengths ahead of the nose tip to 1.5 behind the fin tips, filled with 10&nbsp;mm cells. CFX uses the same meshes.</p>
+      </div>
+      <div class="split">
+        <div>
+          <div class="tbl" style="margin-top:0">
+            <table class="data">
+              <thead><tr><th scope="col">Half-model mesh</th><th scope="col">Cases</th><th scope="col">Cells</th><th scope="col">Nodes</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">400&nbsp;mm, plain</th><td>Mach 0.1, 0.8</td><td>4,139,782</td><td>1,885,002</td></tr>
+                <tr><th scope="row">400&nbsp;mm, zone</th><td>Mach 1.5, 2</td><td>5,347,891</td><td>2,088,051</td></tr>
+                <tr><th scope="row">850&nbsp;mm, plain</th><td>Mach 0.1, 0.8</td><td>5,169,862</td><td>2,264,806</td></tr>
+                <tr><th scope="row">850&nbsp;mm, zone</th><td>Mach 1.5, 2</td><td>7,492,113</td><td>2,657,138</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tnote">Zone: with the refinement zone for the shocks.</p>
+        </div>
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 12"><img src="assets/rocket400_half_boi_medium_sym_rocket.png" width="1600" height="900" alt="A mesh of grey-blue triangles round the white silhouette of the rocket, with thin layers of cells packed along every wall." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 12</span>The mesh on the symmetry plane round the 400&nbsp;mm rocket, with the refinement zone: tetrahedra, and the prism layers along every wall.</figcaption>
+        </figure>
+      </div>
+      <div class="gallery">
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 13"><img src="assets/rocket400_half_boi_medium_sym_nose.png" width="1600" height="900" alt="Close view of the rounded nose tip: tens of thin layers of cells wrap the wall and meet larger triangles further out." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 13</span>The prism layers at the nose tip: 35 layers from a first layer of 2&nbsp;µm.</figcaption>
+        </figure>
+        <figure class="shot light">
+          <button class="zoom" type="button" aria-label="Enlarge Fig. 14"><img src="assets/rocket400_full_medium_walls.png" width="1600" height="900" alt="The rocket's surface mesh in dark blue: a fine triangle mesh on the body, the base and the four fins." loading="lazy" decoding="async"></button>
+          <figcaption><span class="mono">Fig. 14</span>The surface mesh of the 400&nbsp;mm rocket: 1&nbsp;mm cells on the fins, 2.5&nbsp;mm elsewhere.</figcaption>
+        </figure>
+      </div>
+      <p class="credit-line">Figs. 12 to 14: the meshes made in Ansys Meshing, rendered in ParaView.</p>
+      <div class="split" style="margin-top:2rem">
+        <div class="prose">
+          <h3>Two solver set-ups</h3>
+          <p>At Mach 0.1, rhoSimpleFoam solves the steady equations with SIMPLE (set-up E0); at Mach 0.8, 1.5 and 2, rhoPimpleFoam marches in local pseudo-time steps to the steady state (set-up L0). Both start with first-order upwind convection and then switch to second-order linear-upwind convection with limited gradients, and both keep the pressure between set limits during the start.</p>
+          <p>Air is a perfect gas of molar mass 28.96&nbsp;kg/kmol and constant specific heat, with Sutherland's viscosity and a Prandtl number of 0.690. Turbulence follows the k-ω SST model with wall functions that hold at any <i>y</i><sup>+</sup>. The free stream is the sea-level standard atmosphere, 288.15&nbsp;K and 101325&nbsp;Pa, with an ASSUMED turbulence intensity of 1&nbsp;% and eddy-viscosity ratio of 10.</p>
+        </div>
+        <div>
+          <div class="tbl" style="margin-top:0">
+            <table class="data wraps">
+              <thead><tr><th scope="col">Setting</th><th scope="col">E0</th><th scope="col">L0</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Mach numbers</th><td>0.1</td><td>0.8, 1.5 and 2</td></tr>
+                <tr><th scope="row">Solver</th><td>rhoSimpleFoam, steady</td><td>rhoPimpleFoam, local time stepping, transonic formulation</td></tr>
+                <tr><th scope="row">Under-relaxation</th><td>p 0.05, ρ 0.01, equations 0.7</td><td>none</td></tr>
+                <tr><th scope="row">Courant number</th><td>–</td><td>0.1 in the start-up, 0.2 after it</td></tr>
+                <tr><th scope="row">Pressure limits</th><td>0.10 to 2 <i>p</i><sub>∞</sub></td><td>0.05 to 10 <i>p</i><sub>∞</sub></td></tr>
+                <tr><th scope="row">Velocity limit</th><td>2 <i>U</i><sub>∞</sub></td><td>none</td></tr>
+                <tr><th scope="row">First-order start-up</th><td>200 iterations</td><td>500 iterations</td></tr>
+                <tr><th scope="row">Health gate</th><td>iteration 500</td><td>iteration 800</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="tbl">
+        <table class="data">
+          <thead><tr><th scope="col">Mach</th><th scope="col"><i>U</i><sub>∞</sub></th><th scope="col"><i>q</i><sub>∞</sub></th><th scope="col"><span class="u">Re, 400&nbsp;mm</span></th><th scope="col"><span class="u">Re, 850&nbsp;mm</span></th></tr></thead>
+          <tbody>
+            <tr><th scope="row">0.1</th><td>34.0&nbsp;m/s</td><td>0.71&nbsp;kPa</td><td>9.32 × 10<sup>5</sup></td><td>1.98 × 10<sup>6</sup></td></tr>
+            <tr><th scope="row">0.8</th><td>272.2&nbsp;m/s</td><td>45.39&nbsp;kPa</td><td>7.45 × 10<sup>6</sup></td><td>1.58 × 10<sup>7</sup></td></tr>
+            <tr><th scope="row">1.5</th><td>510.4&nbsp;m/s</td><td>159.59&nbsp;kPa</td><td>1.40 × 10<sup>7</sup></td><td>2.97 × 10<sup>7</sup></td></tr>
+            <tr><th scope="row">2</th><td>680.6&nbsp;m/s</td><td>283.71&nbsp;kPa</td><td>1.86 × 10<sup>7</sup></td><td>3.96 × 10<sup>7</sup></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">The free stream of the cases; Reynolds numbers on the body length.</p>
+      <div class="cards three">
+        <div class="card"><div class="k">Runs</div><h3>One case per cloud container</h3><p>Each case ran alone on 4&nbsp;cores of an Intel Xeon processor, in parts of 500 iterations: at least 1000 iterations at Mach 0.1 and 0.8 and 1500 at Mach 1.5 and 2, at most 4000 and 5000. A run stops once <i>C</i><sub>A</sub>, <i>C</i><sub>N</sub> and <i>C</i><sub>m</sub> each stay within 0.1&nbsp;% of their mean over the last 200 iterations (with floors on the mean for coefficients near zero), or at its cap.</p></div>
+        <div class="card"><div class="k">Health gate</div><h3>Checked after the start-up</h3><p>After the start-up a gate checks that the run is free of fatal errors, that its residuals have fallen, that the pressure no longer touches its limits and that the axial force no longer alternates. A last check confirms that each case ended cleanly and that its force coefficients equal the doubled forces of the half model.</p></div>
+        <div class="card"><div class="k">CFX</div><h3>The same meshes and air</h3><p>CFX ran the 400 and 450&nbsp;mm rockets at Mach 0.1, steady, with the SST model and automatic wall functions, total energy with the viscous work and High Resolution advection. A case stopped at 500 iterations or by the OpenFOAM rule; each angle after the first started from the previous angle's result.</p></div>
+        <div class="card"><div class="k">Hand methods</div><h3>Barrowman and OpenRocket</h3><p>Barrowman's method adds the normal-force slopes of the nose and the fins and places each at its own CP; at an angle of attack the body's crossflow lift is added. OpenRocket's method adds the Mach number: compressibility corrections of the fins below Mach 1, Busemann's supersonic theory above it, and a fin CP that moves aft as the Mach number rises.</p></div>
+        <div class="card"><div class="k">Force split</div><h3>Forces by part from the wall</h3><p>The wall pressure and the axial part of the wall shear are summed over the nose (to 180&nbsp;mm from the tip), the body, the fins and the base. The pressure force and its moment reproduce the solver's own to a relative 10<sup>−4</sup>; the small viscous normal force comes from the solver's force file.</p></div>
+        <div class="card"><div class="k">Pictures and videos</div><h3>Rendered from the results</h3><p>ParaView renders the Mach number and the numerical schlieren of every case, the surface pressure of the eight cases at 4°, the cross-flow planes and a camera orbit: 40 pictures and the frames of four H.264 videos.</p></div>
+      </div>
+      <div class="split" style="margin-top:2rem">
+        <div class="prose">
+          <h3>Barrowman's method in brief</h3>
+          <p>For an ogive nose of length <i>L</i><sub>n</sub>, and <i>N</i> fins of semi-span <i>s</i>, root chord <i>c</i><sub>r</sub>, tip chord <i>c</i><sub>t</sub> and mid-chord line <i>l</i><sub>m</sub> on a body of radius <i>R</i>:</p>
+          <p class="eq"><span class="part">(<i>C</i><sub>Nα</sub>)<sub>n</sub> = 2</span><span class="part"><i>x</i><sub>n</sub> = 0.466 <i>L</i><sub>n</sub></span></p>
+          <p class="eq"><span class="part long">(<i>C</i><sub>Nα</sub>)<sub>f</sub> =<i>K</i><sub>fb</sub> · 4<i>N</i> (<i>s</i>/<i>d</i>)<sup>2</sup> / [1 + √(1 + (2<i>l</i><sub>m</sub> / (<i>c</i><sub>r</sub> + <i>c</i><sub>t</sub>))<sup>2</sup>)]</span><span class="part"><i>K</i><sub>fb</sub> = 1 + <i>R</i> / (<i>s</i> + <i>R</i>)</span></p>
+          <p class="eq"><span class="part"><i>x</i><sub>CP</sub> = Σ (<i>C</i><sub>Nα</sub>)<sub>i</sub> <i>x</i><sub>i</sub> / Σ (<i>C</i><sub>Nα</sub>)<sub>i</sub></span></p>
+        </div>
+        <div class="prose">
+          <h3>For the 400&nbsp;mm rocket</h3>
+          <p>The nose gives 2.0 per radian at 83.9&nbsp;mm and the fins 14.68 per radian, with <i>K</i><sub>fb</sub>&nbsp;=&nbsp;1.25, at 369.9&nbsp;mm, so the CP lies at 335.6&nbsp;mm: 29.3&nbsp;mm behind the launch CG, 0.49&nbsp;calibre. At 4° the body's crossflow lift adds 0.039 to <i>C</i><sub>N</sub> at 225.8&nbsp;mm, ahead of the CG.</p>
+          <div class="tbl">
+            <table class="data">
+              <thead><tr><th scope="col">Rocket</th><th scope="col"><i>x</i><sub>CP</sub></th><th scope="col"><i>x</i><sub>CG</sub></th><th scope="col">Gap</th><th scope="col"><i>SM</i></th></tr></thead>
+              <tbody>
+                <tr><th scope="row">400&nbsp;mm</th><td>335.6</td><td>306.3</td><td>29.3</td><td>0.49</td></tr>
+                <tr><th scope="row">450&nbsp;mm</th><td>379.6</td><td>337.4</td><td>42.1</td><td>0.70</td></tr>
+                <tr><th scope="row">631&nbsp;mm</th><td>538.9</td><td>446.8</td><td>92.0</td><td>1.53</td></tr>
+                <tr><th scope="row">850&nbsp;mm</th><td>731.6</td><td>573.4</td><td>158.2</td><td>2.64</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="tnote">Barrowman's CP and the ASSUMED launch CG of the four rockets, in mm from the nose tip; <i>SM</i> in calibres.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="checks">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">Verification</p>
+        <h2>Checked before the results were trusted</h2>
+        <p>Six cases met the convergence rule; the other 10 ran to their caps. At 0° the normal force and the pitching moment are noise around zero and never met their absolute bands, and at Mach 0.8 the forces wander slowly over several hundred iterations. Over the last 20&nbsp;% of the Mach 0.8 runs, the mean of <i>C</i><sub>A</sub> lies 0.029 to 0.041 above its mean over the last 200 iterations, while at 4° <i>C</i><sub>N</sub> differs by at most 1.3&nbsp;% and <i>x</i><sub>CP</sub> by at most 1.4&nbsp;mm: the stability results do not depend on the window. Every case passed its final checks.</p>
+        <p>Each case took from 1.8 to 32.4&nbsp;h of wall time on its 4&nbsp;cores, 269&nbsp;h in all (1,078&nbsp;core-hours); the containers ran side by side.</p>
+      </div>
+      <div class="split">
+        <div>
+          <h3>400&nbsp;mm rocket</h3>
+          <div class="tbl" style="margin-top:.4rem">
+            <table class="data">
+              <thead><tr><th scope="col">Case</th><th scope="col">End</th><th scope="col">Iterations</th><th scope="col">Wall time</th><th scope="col"><i>y</i><sup>+</sup> max</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Mach 0.1, 0°</th><td>converged</td><td>1000</td><td>2.0&nbsp;h</td><td>0.38</td></tr>
+                <tr><th scope="row">Mach 0.1, 4°</th><td>converged</td><td>1000</td><td>1.8&nbsp;h</td><td>0.60</td></tr>
+                <tr><th scope="row">Mach 0.8, 0°</th><td>at cap</td><td>4000</td><td>12.0&nbsp;h</td><td>1.98</td></tr>
+                <tr><th scope="row">Mach 0.8, 4°</th><td>at cap</td><td>4000</td><td>12.0&nbsp;h</td><td>2.47</td></tr>
+                <tr><th scope="row">Mach 1.5, 0°</th><td>at cap</td><td>5000</td><td>22.1&nbsp;h</td><td>3.23</td></tr>
+                <tr><th scope="row">Mach 1.5, 4°</th><td>converged</td><td>4500</td><td>16.3&nbsp;h</td><td>3.57</td></tr>
+                <tr><th scope="row">Mach 2, 0°</th><td>at cap</td><td>5000</td><td>19.8&nbsp;h</td><td>4.62</td></tr>
+                <tr><th scope="row">Mach 2, 4°</th><td>converged</td><td>4000</td><td>15.2&nbsp;h</td><td>4.98</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3>850&nbsp;mm rocket</h3>
+          <div class="tbl" style="margin-top:.4rem">
+            <table class="data">
+              <thead><tr><th scope="col">Case</th><th scope="col">End</th><th scope="col">Iterations</th><th scope="col">Wall time</th><th scope="col"><i>y</i><sup>+</sup> max</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Mach 0.1, 0°</th><td>at cap</td><td>4000</td><td>11.4&nbsp;h</td><td>0.35</td></tr>
+                <tr><th scope="row">Mach 0.1, 4°</th><td>converged</td><td>1500</td><td>3.7&nbsp;h</td><td>0.62</td></tr>
+                <tr><th scope="row">Mach 0.8, 0°</th><td>at cap</td><td>4000</td><td>14.7&nbsp;h</td><td>1.98</td></tr>
+                <tr><th scope="row">Mach 0.8, 4°</th><td>at cap</td><td>4000</td><td>14.7&nbsp;h</td><td>2.41</td></tr>
+                <tr><th scope="row">Mach 1.5, 0°</th><td>at cap</td><td>5000</td><td>30.9&nbsp;h</td><td>2.99</td></tr>
+                <tr><th scope="row">Mach 1.5, 4°</th><td>converged</td><td>5000</td><td>31.0&nbsp;h</td><td>3.23</td></tr>
+                <tr><th scope="row">Mach 2, 0°</th><td>at cap</td><td>5000</td><td>32.4&nbsp;h</td><td>4.10</td></tr>
+                <tr><th scope="row">Mach 2, 4°</th><td>at cap</td><td>5000</td><td>29.4&nbsp;h</td><td>4.60</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="tnote">Wall time on 4&nbsp;cores. <i>y</i><sup>+</sup> max: the largest wall distance in wall units on the walls; the highest, 4.98, lies on the fins at Mach 2.</p>
+      <figure class="shot light">
+        <button class="zoom" type="button" aria-label="Enlarge Fig. 15"><img src="assets/fig_histories.png" width="1882" height="1973" alt="Sixteen small plots of the axial and normal force coefficients against iteration: most settle to flat lines, the Mach 0.8 cases wander slowly; a grey band marks the last 200 iterations of each." loading="lazy" decoding="async"></button>
+        <figcaption><span class="mono">Fig. 15</span>Force histories of the 16 cases, <i>C</i><sub>A</sub> and <i>C</i><sub>N</sub> (the first 20&nbsp;% of each run left out); the grey band marks the last 200 iterations.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="problems">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">Problems found and fixed</p>
+        <h2>Fourteen problems, each with its evidence and fix</h2>
+        <p>The study's report ends with a log of the problems met while the meshes were made, the cases run and the results post-processed. Each had its evidence, its fix and a result that shows the fix held.</p>
+      </div>
+      <div class="cards two">
+        <div class="card"><div class="k">Starting the solvers</div>
+          <ul>
+            <li>An impulsive start of rhoSimpleFoam from the free stream diverged in every container that reported, with floating-point exceptions at iterations 36 to 95. At Mach 0.1 the SIMPLE set-up E0, with strong under-relaxation, pressure and velocity limits and first-order schemes to iteration 200, passed its gate at iteration 500; SIMPLE is not used at Mach 0.8.</li>
+            <li>Local time stepping with the default smoothing froze the flow near the body: the pseudo-time step was tied to the 5.9 × 10<sup>−10</sup>&nbsp;s of the wall cells, and 621 of 800 pressure solves did no iteration. With set-up L0 (a smoothing coefficient of 0.5, at least one iteration in every pressure solve and the transonic formulation) the Mach 0.8 pilot passed its gate at iteration 800 with no warning.</li>
+            <li>At a Courant number of 0.5 the pressure force alternated from one pseudo-time step to the next, by up to 0.13 in <i>C</i><sub>A</sub>. With 0.1 in the start-up, 0.2 after it and a gate test on the swing, the swing fell to 7.6 × 10<sup>−6</sup> against a band of 6.87 × 10<sup>−3</sup>.</li>
+          </ul></div>
+        <div class="card"><div class="k">Sixteen cases at once</div>
+          <ul>
+            <li>Static checks alone missed a fault that stopped every case at iteration 0 on the symmetry patch, and the first gate could not tell a frozen field from a healthy one. One update of 872,032 bytes brought the two set-ups, a health gate, a start-up test, a divergence guard and nine script fixes; a pilot applied it first, and all 16 cases ended with their acceptance checks passed.</li>
+            <li>At Mach 2 the base flow failed the gate at iteration 800 while the base filled: the pressure sat on its lower limit and the temperature reached 704 to 782&nbsp;K against a bound of 700&nbsp;K. A gate that fails only on those limits is judged again every 100 iterations; the four Mach 2 cases passed at iterations 1000 to 1100.</li>
+            <li>The cloud machines restarted several times a night. Each case resumed from its latest written time; the largest loss took about 30 minutes.</li>
+            <li>Each case returns one zip with its SHA-256: 16 zips, 994,070,819 bytes, all passing their byte count, SHA-256 and CRC checks, and the analysis reads them in place.</li>
+          </ul></div>
+        <div class="card"><div class="k">Meshes and convergence</div>
+          <ul>
+            <li>OpenFOAM v1912's mesh converter reads only the text sections of a Fluent mesh, and the exported meshes carry their data in binary sections. A transcoder wrote the same meshes as text, checked node for node and face for face; the 4.14 million cells of the 400&nbsp;mm mesh were prepared in 2&nbsp;min 1&nbsp;s.</li>
+            <li>checkMesh found non-orthogonality up to 87.9° (23.3° on average) with 14,186 faces above 70°, as expected for 2&nbsp;µm wall layers. The meshes were kept, as CFX uses the same ones, with limited corrected schemes and two non-orthogonal correctors.</li>
+            <li>Ten of the sixteen cases ended at their iteration caps. The results give the means over the last 200 iterations with the ranges over the last 20&nbsp;% of each run, and the CP only at incidence.</li>
+          </ul></div>
+        <div class="card"><div class="k">CFX</div>
+          <ul>
+            <li>CFX refuses a specified flow direction within 10 degrees of a boundary's tangent, and the free stream runs almost along the far-field cylinder. The far-field opening takes its direction from a linearisation by the velocity magnitude; the tests and all eight production cases ran.</li>
+            <li>The CFX chain stopped when its window was closed, 304 iterations into its ninth case. At this stage it was not restarted: the comparisons use the OpenFOAM results, and CFX ran 8 of its 57 planned cases.</li>
+          </ul></div>
+        <div class="card"><div class="k">Pictures and videos</div>
+          <ul>
+            <li>ParaView 6.1's pvbatch wrote black pictures after about 20 views in one process: one process per case and a check of every picture for blank output; all 40 pictures pass.</li>
+            <li>A schlieren scaled by its largest gradient, at the nose tip 10 to 15 times the 90th percentile, was nearly white: it is scaled by the 90th percentile.</li>
+            <li>The video exports counted .vtk files while v1912 writes .vtp, and left off-value points at the rims of the iso-surfaces: ParaView trims the rim cells before rendering and counts them, and the Mach 2 orbit keeps 233,463 of 233,463 compression cells and 415,282 of 415,347 expansion cells.</li>
+          </ul></div>
+        <div class="card"><div class="k">The force split</div>
+          <ul>
+            <li>v1912's VTK writer gives four times the true byte count in the connectivity header: the reader checks every array against the counts of its piece.</li>
+            <li>The written wall shear gives a viscous normal force of −0.0149&nbsp;N against +0.0067&nbsp;N in the force file (400&nbsp;mm rocket, Mach 0.1, 4°, half model): the split takes the viscous normal force from the force file, and reproduces the solver's forces to 1 × 10<sup>−4</sup>.</li>
+          </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="status">
+    <div class="wrap">
+      <p class="eyebrow">Status</p>
+      <h2>The first phase: OpenFOAM, with CFX in part</h2>
+      <div class="split">
+        <div class="prose">
+          <h3>Limits</h3>
+          <ul>
+            <li>The margins rest on an ASSUMED mass model; a measured CG moves every margin by one calibre for each 60&nbsp;mm of difference.</li>
+            <li>The cases are steady RANS solutions. At Mach 0.8 the forces wander over several hundred iterations; 10 of the 16 cases ended at their caps, with their spreads over the last 20&nbsp;% of each run given.</li>
+            <li>Each rocket was computed at 0 and 4° only: the normal-force slope is a secant, and the behaviour at larger angles is not computed.</li>
+            <li>The half models hold symmetric flow in the pitch plane, with the fins in one roll position: a pair of fins in the plane of the angle of attack.</li>
+            <li>The largest <i>y</i><sup>+</sup> on the walls reaches 4.98 at Mach 2, on the fins; the wall functions hold at any <i>y</i><sup>+</sup>.</li>
+            <li>CFX ran 8 of its 57 planned cases, all at Mach 0.1.</li>
+          </ul>
+        </div>
+        <div class="prose">
+          <h3>Next</h3>
+          <ol>
+            <li>CFX's remaining cases: all four rockets, the transonic points and angles up to 8°, after which the analysis, the report and this page are updated;</li>
+            <li>dynamic stability: the pitch frequency and damping, and six-degree-of-freedom flights from the CFD coefficient tables.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="credits">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">Sources and credits</p>
+        <h2>Credits</h2>
+        <ul class="credits">
+          <li><strong>Simulation.</strong> OpenFOAM v1912 (ESI-OpenCFD): rhoSimpleFoam and rhoPimpleFoam, each case in its own cloud container. Ansys 2025&nbsp;R2: Ansys Meshing for the meshes and Ansys CFX for eight cases.</li>
+          <li><strong>The rockets.</strong> The four rockets are the designer's own, drawn in CAD. The ASSUMED mass model sizes their printed parts like those of the Inholland model rocket (Ultimaker for Inholland University of Applied Sciences, YouMagine, 2017). Motor data: Estes D12 on ThrustCurve.org; PLA density: NatureWorks Ingeo 4043D data sheet.</li>
+          <li><strong>Methods.</strong> Barrowman, “Calculating the Center of Pressure of a Model Rocket”, Centuri Engineering Company, Technical Information Report TIR-33; Niskanen, OpenRocket technical documentation, version 13.05 (2013); Menter, “Two-equation eddy-viscosity turbulence models for engineering applications”, AIAA Journal 32 (1994) 1598–1605, <a href="https://doi.org/10.2514/3.12149">doi.org/10.2514/3.12149</a>; the U.S. Standard Atmosphere, 1976, for the free stream.</li>
+          <li><strong>Pictures and videos.</strong> The flow pictures and the videos are rendered in ParaView 6.1 from the OpenFOAM results, the half models mirrored for display, and encoded with FFmpeg; the plots are drawn with Python and Matplotlib from the solvers' force histories; Fig. 1 comes from the study's hand-method scripts.</li>
+          <li><strong>Source.</strong> The figures, tables and numbers on this page come from the study's technical report of 25&nbsp;November&nbsp;2026, “Centre of pressure and static stability of two model rockets from Mach 0.1 to 2”, which gives the methods, the results, the reasons for the stability, the problem log and the references.</li>
+          <li><strong>Status.</strong> Simulation results, not flight tests. Values called ASSUMED are estimates, not measurements.</li>
+        </ul>
+      </div>
+      <div class="btns">
+        <a class="btn primary" href="https://ckleanth.github.io/George_Constandinides/">Portfolio ↗</a>
+        <a class="btn" href="https://ckleanth.github.io/Explicit_Dynamics/">High-velocity impact on a thin steel plate ↗</a>
+        <a class="btn" href="https://ckleanth.github.io/Plasma_Jet_Simulation/">Simulating a cold plasma jet ↗</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Dr George Constandinides</span>
+    <span><a href="https://ckleanth.github.io/George_Constandinides/">Portfolio</a> · <a href="https://www.youtube.com/ckleanth">YouTube</a> · <a href="https://www.linkedin.com/in/georgeconstandinides/">LinkedIn</a></span>
+  </div>
+</footer>
+
+<dialog class="viewer" id="viewer" aria-label="Enlarged picture">
+  <button class="viewer-close" type="button">Close</button>
+  <img id="viewer-img" alt="">
+  <p id="viewer-cap"></p>
+</dialog>
+
+<script>
+/* Videos with a choice: a button swaps the player's video, poster, label and caption; a playing video goes on playing. */
+(function(){
+  Array.prototype.forEach.call(document.querySelectorAll('figure.switch'),function(box){
+    var v=box.querySelector('video'), s=v?v.querySelector('source'):null, cap=box.querySelector('.vcap');
+    var btns=box.querySelectorAll('.cases button');
+    if(!v||!s||!cap) return;
+    Array.prototype.forEach.call(btns,function(b){
+      b.addEventListener('click',function(){
+        if(b.getAttribute('aria-pressed')==='true') return;
+        var playing=!v.paused&&!v.ended;
+        Array.prototype.forEach.call(btns,function(o){ o.setAttribute('aria-pressed', o===b?'true':'false'); });
+        v.pause();
+        v.setAttribute('poster', b.getAttribute('data-poster'));
+        v.setAttribute('aria-label', b.getAttribute('data-label'));
+        s.setAttribute('src', b.getAttribute('data-src'));
+        cap.textContent=b.getAttribute('data-caption');
+        v.load();
+        if(playing){ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }
+      });
+    });
+  });
+})();
+/* Picture viewer: a picture opens enlarged with its caption; a click, the button or Escape closes it. */
+(function(){
+  var d=document.getElementById('viewer');
+  if(!d||typeof d.showModal!=='function') return;
+  var im=document.getElementById('viewer-img'), cap=document.getElementById('viewer-cap');
+  Array.prototype.forEach.call(document.querySelectorAll('button.zoom'),function(btn){
+    btn.addEventListener('click',function(){
+      var i=btn.querySelector('img'), f=btn.closest('figure'), c=f?f.querySelector('figcaption'):null;
+      var lab=c?c.querySelector('.mono'):null, t=c?c.textContent:'';
+      im.src=i.currentSrc||i.src; im.alt=i.alt;
+      im.className=(f&&f.classList.contains('light'))?'light':'';
+      cap.textContent=lab?lab.textContent+' · '+t.slice(lab.textContent.length):t;
+      d.showModal();
+    });
+  });
+  d.addEventListener('click',function(e){ if(e.target!==cap) d.close(); });
+  d.addEventListener('close',function(){ im.removeAttribute('src'); });
+})();
+</script>
+<script>
+/* ---------- Content protection + reliable contact actions ---------- */
+(function(){
+  var NOTICE = '\u00A9 Dr. George Constandinides \u2014 Mechanical Engineer.\n'
+             + 'This content is protected.';
+  function attribution(){
+    var http = (location.protocol === 'http:' || location.protocol === 'https:');
+    return NOTICE + (http ? '\nOriginal: ' + location.href : '');
+  }
+
+  /* The contact card is deliberately exempt — visitors must be able to reach these */
+  function inContact(node){
+    while(node){
+      if(node.nodeType === 1 && node.classList && node.classList.contains('clink')) return true;
+      node = node.parentNode;
+    }
+    return false;
+  }
+  function selectionInContact(){
+    var sel = window.getSelection && window.getSelection();
+    if(!sel || sel.rangeCount === 0) return false;
+    return inContact(sel.anchorNode) || inContact(sel.focusNode);
+  }
+
+  /* Restrained toast, built from the page's own tokens */
+  var toast, msgEl, hideTimer;
+  var DEFAULT_MSG = 'This content is protected and can\u2019t be copied.';
+  function flash(text){
+    if(!toast){
+      toast = document.createElement('div');
+      toast.className = 'copy-guard';
+      toast.setAttribute('role','status');
+      toast.setAttribute('aria-live','polite');
+      var dot = document.createElement('span');
+      dot.className = 'cg-dot'; dot.setAttribute('aria-hidden','true');
+      msgEl = document.createElement('span');
+      toast.appendChild(dot); toast.appendChild(msgEl);
+      document.body.appendChild(toast);
+    }
+    msgEl.textContent = text || DEFAULT_MSG;
+    toast.classList.add('show');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function(){ toast.classList.remove('show'); }, 2600);
+  }
+
+  /* Clipboard write that works on https AND file:// */
+  var allowCopyOnce = false;            /* lets our own copy bypass the poison below */
+  function legacyCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly','');
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;user-select:text;-webkit-user-select:text';
+    document.body.appendChild(ta);
+    ta.select(); try{ ta.setSelectionRange(0, text.length); }catch(_){}
+    var ok = false;
+    try{ allowCopyOnce = true; ok = document.execCommand('copy'); }catch(_){ ok = false; }
+    allowCopyOnce = false;
+    document.body.removeChild(ta);
+    return ok;
+  }
+  function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+      return navigator.clipboard.writeText(text)
+        .then(function(){ return true; })
+        .catch(function(){ return legacyCopy(text); });
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  /* Anything that still reaches the clipboard is replaced with an attribution notice */
+  function poison(e){
+    if(allowCopyOnce) return;            /* our own programmatic copy */
+    if(selectionInContact()) return;     /* allow copying contact details */
+    var cd = e.clipboardData || window.clipboardData;
+    if(cd){
+      try{
+        cd.setData('text/plain', attribution());
+        cd.setData('text/html', '<p>' + attribution().replace(/\n/g,'<br>') + '</p>');
+      }catch(_){}
+    }
+    e.preventDefault();
+    flash();
+  }
+  document.addEventListener('copy', poison, true);
+  document.addEventListener('cut',  poison, true);
+
+  /* Close the obvious extraction paths (contact card exempted) */
+  document.addEventListener('contextmenu', function(e){ if(inContact(e.target)) return; e.preventDefault(); flash(); }, true);
+  document.addEventListener('dragstart',   function(e){ e.preventDefault(); }, true);
+  document.addEventListener('selectstart', function(e){ if(inContact(e.target)) return; e.preventDefault(); }, true);
+
+  /* Shortcuts: copy / cut / select-all / save / view-source / print, plus a light devtools deterrent */
+  document.addEventListener('keydown', function(e){
+    var k = (e.key || '').toLowerCase();
+    var mod = e.ctrlKey || e.metaKey;
+    if(mod && ['c','x','a','s','u','p'].indexOf(k) !== -1){
+      if((k === 'c' || k === 'x') && selectionInContact()) return;   /* allow copying contact details */
+      e.preventDefault();
+      if(k === 'c' || k === 'x' || k === 'a') flash();
+      return;
+    }
+    if(e.key === 'F12'){ e.preventDefault(); return; }
+    if(mod && e.shiftKey && ['i','j','c'].indexOf(k) !== -1){ e.preventDefault(); }
+  }, true);
+
+  /* Reliable email: native mailto still fires for anyone with a mail client;
+     we also copy the address as a guaranteed fallback for those without one. */
+  function initMail(){
+    var links = document.querySelectorAll('a[href^="mailto:"]');
+    Array.prototype.forEach.call(links, function(a){
+      a.addEventListener('click', function(){
+        var addr = (a.getAttribute('href') || '').replace(/^mailto:/i,'').split('?')[0];
+        if(!addr) return;
+        /* No preventDefault: if a handler is registered, the mail client opens. */
+        copyText(addr).then(function(ok){
+          flash(ok ? 'Email address copied \u2014 opening your mail app\u2026 (paste it if nothing opens)'
+                   : 'Email: ' + addr);
+        });
+      });
+    });
+  }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', initMail); }
+  else{ initMail(); }
+})();
+</script>
+</body>
+</html>
